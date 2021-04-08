@@ -21,5 +21,5 @@ setup(
     license='LICENSE',
     description=('Find processed pseudo genes in DNA sequencing data using input structural variant calls'),
     long_description=(LONG_DESCRIPTION),
-    install_requires=["intervaltree"],
+    install_requires=["intervaltree", "cyvcf2"],
 )
