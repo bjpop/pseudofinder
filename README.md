@@ -46,33 +46,41 @@ $ pip install -U --user /path/to/pseudofinder
 
 # General behaviour
 
+## Example
+
+```
+pseudofinder --exons hg19.genes.exons.txt --log example.log --sample sample_name sv_vcf_file.vcf > sample_name.psuedo.csv 
+```
+
 ## Help message
 
 Psuedofinder can display usage information on the command line via the `-h` or `--help` argument:
 
 ```
 $ pseudofinder -h
-```
+usage: pseudofinder [-h] --exons FILEPATH --sample STR [--version] [--log LOG_FILE] FILEPATH
 
-## Logging
+Read one or more FASTA files, compute simple stats for each file
 
-If the ``--log FILE`` command line argument is specified, pseudofinder will output a log file containing information about program progress. The log file includes the command line used to execute the program, and a note indicating which files have been processes so far. Events in the log file are annotated with their date and time of occurrence. 
+positional arguments:
+  FILEPATH          Filepaths of VCF file containing structural variant calls
 
+optional arguments:
+  -h, --help        show this help message and exit
+  --exons FILEPATH  Filepath of file containing exon coordinates for genes of interest
+  --sample STR      Name of sample
+  --version         show program's version number and exit
+  --log LOG_FILE    record program progress in LOG_FILE
 ```
-$ pseudofinder --log pf.log file1.fasta file2.fasta 
-```
-```
-$ cat bt.log
-```
-
 
 ## Exit status values
 
 Psuedofinder returns the following exit status values:
 
 * 0: The program completed successfully.
-* 1: File I/O error. This can occur if at least one of the input FASTA files cannot be opened for reading. This can occur because the file does not exist at the specified path, or pseudofinder does not have permission to read from the file. 
-
+* 1: File I/O error
+* 2: Command line error 
+* 3: VCF file error
 
 # Bug reporting and feature requests
 
