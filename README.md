@@ -19,6 +19,11 @@ Clone this repository:
 $ git clone https://github.com/bjpop/pseudofinder
 ```
 
+The program depends on cyvcf2, which depends on htslib, which depends on curl. To install you may need the curl library available. On Spartan this can be achieved with:
+```
+module load curl/7.72.0
+```
+
 Move into the repository directory:
 ```
 $ cd pseudofinder
