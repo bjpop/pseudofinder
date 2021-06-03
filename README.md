@@ -4,6 +4,8 @@ This program tries to find processed pseudo genes in genome sequencing data usin
 
 In the examples below, `$` indicates the command line prompt.
 
+This is a test branch.
+
 # Licence
 
 This program is released as open source software under the terms of [MIT License](https://raw.githubusercontent.com/bjpop/pseudofinder/master/LICENSE).
