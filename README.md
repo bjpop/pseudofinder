@@ -16,7 +16,7 @@ You can install pseudofinder directly from the source code.
 
 Clone this repository: 
 ```
-$ git clone https://github.com/bjpop/pseudofinder
+$ git clone https://github.com/FelixN1l/pseudofinder
 ```
 
 The program depends on cyvcf2, which depends on htslib, which depends on curl. To install you may need the curl library available. On Spartan this can be achieved with:
