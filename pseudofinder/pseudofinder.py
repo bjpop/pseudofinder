@@ -321,7 +321,6 @@ def process_variants(sample, gene_intron_count, gene_introns, vcf_filename):
 
 def main():
     "Orchestrate the execution of the program"
-    import ipdb; ipdb.set_trace()
     options = parse_args()
     init_logging(options.log)
     gene_intron_count, gene_introns = read_exons(options.exons)
