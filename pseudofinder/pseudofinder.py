@@ -275,12 +275,13 @@ class NormSV(object):
         else:
             exit_with_error("Unsupported SVTYPE: {}".format(sv_type), EXIT_VCF_FILE_ERROR)
 
+# The threshold to determine whether an SV and an intron are matching 
+MATCH_COORD_WINDOW = 0.1
 
-MATCH_COORD_WINDOW = 10 
-
-# check if an SV is a close match for an intron based on their respective start and end coordinates
+# check if an SV maps closely with an intron based on their respective start and end coordinates
 def sv_matches_intron(sv_start, sv_end, intron_start, intron_end):
-    return abs(sv_start - intron_start) <= MATCH_COORD_WINDOW and abs(sv_end - intron_end) <= MATCH_COORD_WINDOW
+    return (max(intron_start,sv_start) - intron_start) + (intron_end - min(intron_end,sv_end)) / (intron_end - intron_start)
+        <= MATCH_COORD_WINDOW
 
 OUTPUT_HEADER = "sample,gene,max_introns,num_introns_affected,introns_affected"
 
