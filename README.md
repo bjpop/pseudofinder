@@ -18,17 +18,19 @@ You can install pseudofinder directly from the source code.
 
 Clone this repository: 
 ```
-$ git clone https://github.com/iefadnil/pseudofinder
+git clone https://github.com/iefadnil/pseudofinder
 ```
 
 The program depends on cyvcf2, which depends on htslib, which depends on curl. To install you may need the curl library available. On Spartan this can be achieved with:
 ```
+module load gcccore/8.3.0
 module load curl/7.72.0
+module load python/3.8.2
 ```
 
 Move into the repository directory:
 ```
-$ cd pseudofinder
+cd pseudofinder
 ```
 
 Python 3 is required for this software.
@@ -37,17 +39,17 @@ Psuedofinder can be installed using `pip` in a variety of ways (`$` indicates th
 
 1. Inside a virtual environment:
 ```
-$ python3 -m venv pseudofinder_dev
-$ source pseudofinder_dev/bin/activate
-$ pip install -U /path/to/pseudofinder
+python3 -m venv pseudofinder_dev
+source pseudofinder_dev/bin/activate
+pip install -U /path/to/pseudofinder
 ```
 2. Into the global package database for all users:
 ```
-$ pip install -U /path/to/pseudofinder
+pip install -U /path/to/pseudofinder
 ```
 3. Into the user package database (for the current user only):
 ```
-$ pip install -U --user /path/to/pseudofinder
+pip install -U --user /path/to/pseudofinder
 ```
 
 
