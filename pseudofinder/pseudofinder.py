@@ -5,7 +5,6 @@ Copyright   : (c) Bernie Pope, 08 Apr 2021
 License     : MIT 
 Maintainer  : bjpope@unimelb.edu.au 
 Portability : POSIX
-
 Find processed pseudo genes in DNA sequencing data using input structural variant calls
 '''
 
@@ -24,6 +23,7 @@ EXIT_FILE_IO_ERROR = 1
 EXIT_COMMAND_LINE_ERROR = 2
 EXIT_VCF_FILE_ERROR = 3
 DEFAULT_VERBOSE = False
+DEFAULT_WINDOW = 10
 PROGRAM_NAME = "pseudofinder"
 
 
@@ -36,7 +36,6 @@ except pkg_resources.DistributionNotFound:
 def exit_with_error(message, exit_status):
     '''Print an error message to stderr, prefixed by the program name and 'ERROR'.
     Then exit program with supplied exit status.
-
     Arguments:
         message: an error message as a string.
         exit_status: a positive integer representing the exit status of the
@@ -61,6 +60,9 @@ def parse_args():
         '--exons', metavar='FILEPATH', type=str, required=True, 
         help='Filepath of file containing exon coordinates for genes of interest')
     parser.add_argument(
+        '--window', metavar='SIZE', type=int, required=False, default=DEFAULT_WINDOW,
+        help='Default window size to overlap variant with intron/exon boundary. Default: %(default)s.')
+    parser.add_argument(
         '--sample', metavar='STR', type=str, required=True, 
         help='Name of sample')
     parser.add_argument('--version', action='version', version='%(prog)s ' + PROGRAM_VERSION)
@@ -74,7 +76,6 @@ def init_logging(log_filename):
     initialise the logging facility, and write log statement
     indicating the program has started, and also write out the
     command line from sys.argv
-
     Arguments:
         log_filename: either None, if logging is not required, or the
             string name of the log file to write to
@@ -91,11 +92,12 @@ def init_logging(log_filename):
         logging.info('command line: %s', ' '.join(sys.argv))
 
 
-def read_exons(exon_filename):
+def read_exons(window, exon_filename):
     # map from gene name to collection of introns
     genes_introns = defaultdict(set)
     # map from gene name to chromosome, assume each gene is only on one chromosome
     genes_chroms = {}
+    half_window = window // 2
     with open(exon_filename) as file:
         for line in file:
             # skip heading row if it exists, starts with hash
@@ -145,17 +147,17 @@ def read_exons(exon_filename):
         for intron_number, (pos1, pos2) in enumerate(introns):
             # skip over empty introns, they can occur in the data when exons are immediately adjacent
             if pos1 != pos2:
-                intron_tree[pos1:pos2] = (gene, intron_number) 
+                #intron_tree[pos1:pos2] = (gene, intron_number) 
+                intron_tree[pos1 - half_window: pos1 + half_window] = (gene, intron_number, 'start')
+                intron_tree[pos2 - half_window: pos2 + half_window] = (gene, intron_number, 'end')
     return gene_intron_count, result
 
 
 '''
 According to VCF 4.2 spec, section 5.4
-
 There are 4 possible ways to create the ALT in a SVTYPE=BND. In each of the 4 cases,
 the assertion is that s (the REF) is replaced with t, and then some piece starting at
 position p is joined to t. The cases are:
-
 s t[p[ piece extending to the right of p is joined after t
 s t]p] reverse comp piece extending left of p is joined after t
 s ]p]t piece extending to the left of p is joined before t
@@ -163,13 +165,13 @@ s [p[t reverse comp piece extending right of p is joined before t
 '''
 
 # t[p[, bp1 is right of pos1, bp2 is left of pos2 
-INFO_ALT_REGEX_1 = re.compile(r"(?P<replacement>\w+)\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[")
+INFO_ALT_REGEX_1 = re.compile(r"^(?P<replacement>\w)\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[")
 # t]p], bp1 is right of pos1, bp2 is right of pos2
-INFO_ALT_REGEX_2 = re.compile(r"(?P<replacement>\w+)\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\]")
+INFO_ALT_REGEX_2 = re.compile(r"^(?P<replacement>\w)\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\]")
 # ]p]t, bp1 is left of pos1, bp2 is right of pos2
-INFO_ALT_REGEX_3 = re.compile(r"\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\](?P<replacement>\w+)")
+INFO_ALT_REGEX_3 = re.compile(r"\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\](?P<replacement>\w)$")
 # [p[t, bp1 is left of pos1, bp2 is left of pos2
-INFO_ALT_REGEX_4 = re.compile(r"\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[(?P<replacement>\w+)")
+INFO_ALT_REGEX_4 = re.compile(r"\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[(?P<replacement>\w)$")
 
 class SVException(Exception):
     pass 
@@ -275,13 +277,12 @@ class NormSV(object):
         else:
             exit_with_error("Unsupported SVTYPE: {}".format(sv_type), EXIT_VCF_FILE_ERROR)
 
-# The threshold to determine whether an SV and an intron are matching 
-MATCH_COORD_WINDOW = 0.1
 
-# check if an SV maps closely with an intron based on their respective start and end coordinates
+MATCH_COORD_WINDOW = 10 
+
+# check if an SV is a close match for an intron based on their respective start and end coordinates
 def sv_matches_intron(sv_start, sv_end, intron_start, intron_end):
-    return (max(intron_start,sv_start) - intron_start) + (intron_end - min(intron_end,sv_end)) / (intron_end - intron_start)
-        <= MATCH_COORD_WINDOW
+    return abs(sv_start - intron_start) <= MATCH_COORD_WINDOW and abs(sv_end - intron_end) <= MATCH_COORD_WINDOW
 
 OUTPUT_HEADER = "sample,gene,max_introns,num_introns_affected,introns_affected"
 
@@ -303,12 +304,18 @@ def process_variants(sample, gene_intron_count, gene_introns, vcf_filename):
                     start = norm.bnd_low.pos
                     end = norm.bnd_high.pos
                     # find all the introns that this variant overlaps
+                    sv_intersects_genes = defaultdict(list)
                     if chrom in gene_introns:
                         intron_tree = gene_introns[chrom]
-                        for intersection in intron_tree[start:end]:
-                            if sv_matches_intron(start, end, intersection.begin, intersection.end):
-                                intersected_gene, intersected_inton = intersection.data
-                                gene_hits[intersected_gene].add(intersected_inton)
+                        for intersection in intron_tree[start]:
+                            intersected_gene, intersected_intron, begin_end = intersection.data
+                            sv_intersects_genes[intersected_gene].append(intersected_intron)
+                        for intersection in intron_tree[end]:
+                            intersected_gene, intersected_intron, begin_end = intersection.data
+                            sv_intersects_genes[intersected_gene].append(intersected_intron)
+                    for intersected_gene, intersected_introns in sv_intersects_genes.items():
+                        if len(intersected_introns) >= 2:
+                            gene_hits[intersected_gene].update(intersected_introns)
             except SVException:
                 # skip over any variant we cannot parse
                 pass
@@ -323,7 +330,7 @@ def main():
     "Orchestrate the execution of the program"
     options = parse_args()
     init_logging(options.log)
-    gene_intron_count, gene_introns = read_exons(options.exons)
+    gene_intron_count, gene_introns = read_exons(options.window, options.exons)
     process_variants(options.sample, gene_intron_count, gene_introns, options.vars)
 
 
