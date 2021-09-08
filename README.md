@@ -41,15 +41,15 @@ Psuedofinder can be installed using `pip` in a variety of ways (`$` indicates th
 ```
 python3 -m venv pseudofinder_dev
 source pseudofinder_dev/bin/activate
-pip install -U ${pwd}
+pip install -U $(pwd)
 ```
 2. Into the global package database for all users:
 ```
-pip install -U ${pwd}
+pip install -U $(pwd)
 ```
 3. Into the user package database (for the current user only):
 ```
-pip install -U --user ${pwd}
+pip install -U --user $(pwd)
 ```
 
 
