@@ -5,6 +5,7 @@ Copyright   : (c) Bernie Pope, 08 Apr 2021
 License     : MIT 
 Maintainer  : bjpope@unimelb.edu.au 
 Portability : POSIX
+
 Find processed pseudo genes in DNA sequencing data using input structural variant calls
 '''
 
@@ -23,7 +24,6 @@ EXIT_FILE_IO_ERROR = 1
 EXIT_COMMAND_LINE_ERROR = 2
 EXIT_VCF_FILE_ERROR = 3
 DEFAULT_VERBOSE = False
-DEFAULT_WINDOW = 10
 PROGRAM_NAME = "pseudofinder"
 
 
@@ -36,6 +36,7 @@ except pkg_resources.DistributionNotFound:
 def exit_with_error(message, exit_status):
     '''Print an error message to stderr, prefixed by the program name and 'ERROR'.
     Then exit program with supplied exit status.
+
     Arguments:
         message: an error message as a string.
         exit_status: a positive integer representing the exit status of the
@@ -60,9 +61,6 @@ def parse_args():
         '--exons', metavar='FILEPATH', type=str, required=True, 
         help='Filepath of file containing exon coordinates for genes of interest')
     parser.add_argument(
-        '--window', metavar='SIZE', type=int, required=False, default=DEFAULT_WINDOW,
-        help='Default window size to overlap variant with intron/exon boundary. Default: %(default)s.')
-    parser.add_argument(
         '--sample', metavar='STR', type=str, required=True, 
         help='Name of sample')
     parser.add_argument('--version', action='version', version='%(prog)s ' + PROGRAM_VERSION)
@@ -76,6 +74,7 @@ def init_logging(log_filename):
     initialise the logging facility, and write log statement
     indicating the program has started, and also write out the
     command line from sys.argv
+
     Arguments:
         log_filename: either None, if logging is not required, or the
             string name of the log file to write to
@@ -92,12 +91,11 @@ def init_logging(log_filename):
         logging.info('command line: %s', ' '.join(sys.argv))
 
 
-def read_exons(window, exon_filename):
+def read_exons(exon_filename):
     # map from gene name to collection of introns
     genes_introns = defaultdict(set)
     # map from gene name to chromosome, assume each gene is only on one chromosome
     genes_chroms = {}
-    half_window = window // 2
     with open(exon_filename) as file:
         for line in file:
             # skip heading row if it exists, starts with hash
@@ -147,17 +145,17 @@ def read_exons(window, exon_filename):
         for intron_number, (pos1, pos2) in enumerate(introns):
             # skip over empty introns, they can occur in the data when exons are immediately adjacent
             if pos1 != pos2:
-                #intron_tree[pos1:pos2] = (gene, intron_number) 
-                intron_tree[pos1 - half_window: pos1 + half_window] = (gene, intron_number, 'start')
-                intron_tree[pos2 - half_window: pos2 + half_window] = (gene, intron_number, 'end')
+                intron_tree[pos1:pos2] = (gene, intron_number) 
     return gene_intron_count, result
 
 
 '''
 According to VCF 4.2 spec, section 5.4
+
 There are 4 possible ways to create the ALT in a SVTYPE=BND. In each of the 4 cases,
 the assertion is that s (the REF) is replaced with t, and then some piece starting at
 position p is joined to t. The cases are:
+
 s t[p[ piece extending to the right of p is joined after t
 s t]p] reverse comp piece extending left of p is joined after t
 s ]p]t piece extending to the left of p is joined before t
@@ -304,18 +302,12 @@ def process_variants(sample, gene_intron_count, gene_introns, vcf_filename):
                     start = norm.bnd_low.pos
                     end = norm.bnd_high.pos
                     # find all the introns that this variant overlaps
-                    sv_intersects_genes = defaultdict(list)
                     if chrom in gene_introns:
                         intron_tree = gene_introns[chrom]
-                        for intersection in intron_tree[start]:
-                            intersected_gene, intersected_intron, begin_end = intersection.data
-                            sv_intersects_genes[intersected_gene].append(intersected_intron)
-                        for intersection in intron_tree[end]:
-                            intersected_gene, intersected_intron, begin_end = intersection.data
-                            sv_intersects_genes[intersected_gene].append(intersected_intron)
-                    for intersected_gene, intersected_introns in sv_intersects_genes.items():
-                        if len(intersected_introns) >= 2:
-                            gene_hits[intersected_gene].update(intersected_introns)
+                        for intersection in intron_tree[start:end]:
+                            if sv_matches_intron(start, end, intersection.begin, intersection.end):
+                                intersected_gene, intersected_inton = intersection.data
+                                gene_hits[intersected_gene].add(intersected_inton)
             except SVException:
                 # skip over any variant we cannot parse
                 pass
@@ -330,7 +322,7 @@ def main():
     "Orchestrate the execution of the program"
     options = parse_args()
     init_logging(options.log)
-    gene_intron_count, gene_introns = read_exons(options.window, options.exons)
+    gene_intron_count, gene_introns = read_exons(options.exons)
     process_variants(options.sample, gene_intron_count, gene_introns, options.vars)
 
 
