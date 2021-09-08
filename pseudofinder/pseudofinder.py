@@ -170,13 +170,13 @@ s [p[t reverse comp piece extending right of p is joined before t
 '''
 
 # t[p[, bp1 is right of pos1, bp2 is left of pos2 
-INFO_ALT_REGEX_1 = re.compile(r"(?P<replacement>\w+)\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[")
+INFO_ALT_REGEX_1 = re.compile(r"^(?P<replacement>\w)\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[")
 # t]p], bp1 is right of pos1, bp2 is right of pos2
-INFO_ALT_REGEX_2 = re.compile(r"(?P<replacement>\w+)\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\]")
+INFO_ALT_REGEX_2 = re.compile(r"^(?P<replacement>\w)\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\]")
 # ]p]t, bp1 is left of pos1, bp2 is right of pos2
-INFO_ALT_REGEX_3 = re.compile(r"\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\](?P<replacement>\w+)")
+INFO_ALT_REGEX_3 = re.compile(r"\](?P<chrom>[^\s:]+)\:(?P<pos>\d+)\](?P<replacement>\w)$")
 # [p[t, bp1 is left of pos1, bp2 is left of pos2
-INFO_ALT_REGEX_4 = re.compile(r"\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[(?P<replacement>\w+)")
+INFO_ALT_REGEX_4 = re.compile(r"\[(?P<chrom>[^\s:]+)\:(?P<pos>\d+)\[(?P<replacement>\w)$")
 
 class SVException(Exception):
     pass 
